@@ -26,7 +26,15 @@ you realize that the chance of red or black are both slightly less than 1/2. The
 Let's make a quick sampling model for this simple version of roulette. You are going to bet a dollar each time you play and always bet on black. Make a box model for this process using the `sample` function. Write a function `get_outcome` that takes as an argument the number of times you play $N$ and returns your earnings $S_N$.
 
 ```{r}
-##Your code here
+
+get_outcome <- function(N){
+ S_N <- sample( c(-1,2), N, replace = TRUE, prob=c(10/19, 9/19))
+  sum(S_N)
+}
+
+get_outcome(10) 
+
+
 ```
 
 ## Problem 1B
@@ -34,24 +42,77 @@ Let's make a quick sampling model for this simple version of roulette. You are g
 Use Monte Carlo simulation to study the distribution of total earnings $S_N$ for $N=10,25,100,1000$. That is, study the distribution of earnings for different number of plays. What are the distributions of these two random variables? How do the expected values and standard errors change with $N$? Then do the same thing for the average winnings $S_N/N$. What result that you learned in class predicts this?
 
 ```{r}
-##Your code here
+
+##The distribution of earnings for different number of plays
+B <- 10^5
+sampling_dist10 <- replicate(B, get_outcome(10))
+sampling_dist25 <- replicate(B, get_outcome(25))
+sampling_dist100 <- replicate(B, get_outcome(100))
+sampling_dist1000 <- replicate(B, get_outcome(1000))
+
+par(mfrow=c(2,2))
+hist(sampling_dist10)
+hist(sampling_dist25)
+hist(sampling_dist100)
+hist(sampling_dist1000)
+
+## The distribution of average winnings for differen number of plays
+
+B <- 10^5
+avg_10 <- replicate(B, get_outcome(10)/10)
+avg_25 <- replicate(B, get_outcome(25)/25)
+avg_100 <- replicate(B, get_outcome(100)/100)
+avg_1000 <- replicate(B, get_outcome(1000)/1000)
+
+par(mfrow=c(2,2))
+hist(avg_10)
+hist(avg_25)
+hist(avg_100)
+hist(avg_1000)
+
 ```
 
-Your answer here.
+## My answer:
+From the histogram, it shows that as N is getting larger the probability distribution of total earnings (S_N) and average winnings can be approximated with a normal distribution and it centers around the expected value. Central Limit Theory and The Law of Large Numbers predicts this. 
+
 
 
 ## Problem 1C
 
 What is the expected value of our sampling model? What is the standard deviation of our sampling model?
 
-Your answer here.
+## My answer:
+
+E[S_N]= (-1)*10/19 + 2*9/19 = 8/19 = 0.421
+sigma = 3*sqrt(9/19*10/19)= 1.49
 
 ## Problem 1D
 
 Use CLT to approximate the probability that the casino loses money when you play 25 times. Then use a Monte Carlo simulation to confirm.
 
 ```{r}
-##Your code here
+## using CLT
+
+N <- 25
+mu <- 8/19
+sigma <- 3*sqrt(9/19*10/19) 
+
+pnorm( -sqrt(N)*mu/sigma )
+ 
+## using Monte Carlo
+
+B <- 10^5
+error <- replicate(B,{
+  Y <- sample( c(-1,2), N, replace=TRUE, prob=(c(10/19,9/19)) )
+  mean(Y) - mu
+})
+
+z <- error/ (sigma / sqrt(N)  )
+qqnorm(z)
+abline(0,1)   
+
+mean(error > mu)
+
 ```
 
 
@@ -61,10 +122,18 @@ Use CLT to approximate the probability that the casino loses money when you play
 In general, what is the probability that the casino loses money as a function of $N$? Make a plot for values ranging from 25 to 1,000. Why does the casino give you free drinks if you keep playing?
 
 ```{r}
-##Your code here
+N <- c(25:1000)
+mu <- 8/19
+sigma <- 3*sqrt(9/19*10/19) 
+
+prob <- pnorm( -sqrt(N)*mu/sigma )
+
+plot(N, prob)
 ```
 
-Your answer here. 
+## My answer:
+
+As shown in the plot, the probability for the casino to loose money decreases as the number of plays increases. Eventually the probability will converge to 0. "The house always wins!" This is the reason why the casino would offer free drinks in order for the players to continue to bet. 
 
 # Problem 2 
 
@@ -75,7 +144,13 @@ You run a bank that has a history of identifying potential homeowners that can b
 Your bank gives out 1,000 loans this year. Create a sampling model and use the function `sample` to simulate the number of foreclosure in a year with the information that 2% of customers default. Also suppose your bank loses $120,000 on each foreclosure. Run the simulation for one year and report your loss.
 
 ```{r}
-##your code here
+foreclosure <- sample( c(1,0), 1000, replace=TRUE, prob=(c(0.02, 0.98)))
+prop.table( table( foreclosure ) )
+table(foreclosure)
+
+loss <- sum(foreclosure)*120000  
+cat("The bank would lose",loss,
+    "dollars in one year, based on 1,000 loans given and 2% of customers defaulting.")
 ```
 
 ## Problem 2B
@@ -83,7 +158,27 @@ Your bank gives out 1,000 loans this year. Create a sampling model and use the f
 Note that the loss you will incur is a random variable. Use Monte Carlo simulation to estimate the distribution of this random variable. Use summaries and visualization to describe your potential losses to your board of trustees.
 
 ```{r}
-##your code here
+B <- 10^5
+p_loan <- 0.02
+sigma_loan <- 1*sqrt(0.02*0.98) 
+
+foreclosure_dist <- replicate(B,{
+fc_dist <- sample( c(1,0), 1000, replace=TRUE, prob=(c(0.02, 0.98))) 
+mean(fc_dist)
+})
+
+mean(foreclosure_dist)                
+sqrt( mean( foreclosure_dist^2))
+hist(foreclosure_dist)
+
+z <- foreclosure_dist/ (sigma_loan / sqrt(1000)  )
+qqnorm(z)
+abline(0,1)
+
+## Confidence interval:
+p_hat <- mean(foreclosure_dist)
+cat("We are 95% confident that the true probablity of foreclosed houses among 1000 house loans given in one year,will fall in this interval : [",p_hat+ c(-1,1)*qnorm(0.975)*sqrt(p_hat*(1-p_hat))/sqrt(1000),"]")
+cat("We are 95% confident that the true amount of losses will be in this interval: [",(p_hat+ c(-1,1)*qnorm(0.975)*sqrt(p_hat*(1-p_hat))/sqrt(1000))*1000*120000, "]")
 ```
 
 ## Problem 2C
@@ -92,7 +187,20 @@ The 1,000 loans you gave out were for $180,000. The way your bank can give out l
 
 Your solution here. 
 ```{r}
-###your code here
+B <- 10^5
+N <- 1000
+
+interest_rate <- replicate (B,{
+net <- sample( c(1,0), N, replace=TRUE, prob=(c(0.02, 0.98))) 
+prop <- sum(net)/N
+rate_dist <- (100 + (prop*120000))/((1- prop)*180000)
+rate_dist
+})
+
+cat("The interest rate applied in order to expect a profit of $100,000 should be: ",round(mean(interest_rate)*100, digits = 3),"%")
+
+ci_interest <- mean(interest_rate)+ c(-1,1)*qnorm(0.975)*sqrt(mean(interest_rate)*(1-mean(interest_rate)))/sqrt(1000)
+
 ```
 
 
@@ -101,7 +209,16 @@ Your solution here.
 In problem 2C, you were able to set a very low interest rate. Your customers will be very happy and you are expected to earn $100,000 in profits. However, that is just an expectation. Our profit is a random variable. If instead of a profit your bank loses money, your bank defaults. Under the conditions of Problem 2C, what is the probability that your profit is less than 0?
 
 ```{r}
-##your code here
+profit <- replicate (B,{
+profit_house <- sample( c(-120000,mean(interest_rate)*180000), N, replace=TRUE, prob=(c(0.02, 0.98))) 
+sum(profit_house)
+})
+
+mean(profit)
+hist(profit)
+
+cat("The probability that profit is less than 0 is",as.numeric(prop.table(table(profit<0))[2]),".")
+
 ```
 
 ## Problem 2E
@@ -113,7 +230,24 @@ Hint: Use the following short cut. If $p$ fraction of a box are $a$s and $(1-p)$
 Your solution here.
 
 ```{r}
-###your code here
+
+z <-qnorm(0.001)
+## mu_1 = 0.98*180000*i-120000*0.02
+## SE = |180000*i+120000|*sqrt(0.02*0.98)/sqrt(N)
+## z=(0-mu_1)/SE
+## -3.090232=(-176400*i+2400)/(|180000*i+120000|*0.004427189)
+## -3.090232=(-176400*i+2400)/(796.894*i+531.2627)
+## -3.090232*(796.894*i+531.2627)=-176400*i+2400 => -2462.587*i+176400*i=2400+1641.725
+## i= 4041.725/173937.4 = 0.02323666 = 2.32%
+
+profit <- replicate (B,{
+profit_house <- sample( c(-120000,0.0232*180000), N, replace=TRUE, prob=(c(0.02, 0.98))) 
+sum(profit_house)
+})
+
+mean(profit)
+
+cat("The probability that profit is less than 0 is",as.numeric(prop.table(table(profit<0))[2]),".")
 ```
 
 ## Problem 2F
@@ -126,8 +260,8 @@ Hint: See if the disparity is smaller for larger values of $p$. Also check for p
 ##your code here
 ```
 
-
-Your answer here.
+## My answer
+When calculating the interest rate we made the assumption that the default rate would stay at 2%.
 
 ## Problem 3
 
@@ -138,7 +272,38 @@ We were able to set an interest rate of about 2% that guaranteed a very low prob
 The pool of borrowers they found had a much higher default rate, estimated to be $p=0.05$. What interest rate would give these companies the same expected profit as your bank (Answer to 2E)? 
 
 ```{r}
-##your code here
+
+interest_rate <- replicate (B,{
+net <- sample( c(1,0), N, replace=TRUE, prob=(c(0.05, 0.95))) 
+prop <- sum(net)/N
+rate_dist <- (1000 + (prop*120000))/((1- prop)*180000)
+rate_dist
+})
+
+cat("The interest rate applied in order to expect a profit of $1,000,000 should be: ",round(mean(interest_rate)*100, digits = 2),"%")
+
+## mu_1 = 0.95*180000*i-120000*0.05
+## SE = |180000*i+120000|*sqrt(0.05*0.95)/sqrt(N)
+## z=(0-mu_1)/SE
+## -3.090232=(-171000*i+6000)/(|180000*i+120000|*0.006892024)
+## -3.090232=(-171000*i+6000)/(1240.564*i+827.0429)
+## -3.090232*(1240.564*i+827.0429)=-171000*i+6000 => -3833.631*i+171000*i= 6000 + 2555.754
+## i= 8555.754/167166.4 = 0.05118106 = 5.12%
+
+
+profit <- replicate (B,{
+profit_house <- sample( c(-120000,0.0512*180000), N, replace=TRUE, prob=(c(0.05, 0.95))) 
+sum(profit_house)
+})
+
+mean(profit)
+
+cat("The probability that profit is less than 0 is",as.numeric(prop.table(table(profit<0))[2]),".")
+
+## The interest rate applied to maintain a profit of $1,000,000 should be over 4.1%. However,in order to secure the same probabilty (0.001) of loss, companies should charge a higher interest rate of 5.12%
+
+
+
 ```
 
 ## Problem 3B 
@@ -146,16 +311,40 @@ The pool of borrowers they found had a much higher default rate, estimated to be
 At the interest rate calculated in 3A what is the probability of negative profits? Use both the normal approximation and then confirm with a Monte Carlo simulation.
 
 ```{r}
-##your code here
+profit <- replicate (B,{
+profit_house <- sample( c(-120000,0.041*180000), N, replace=TRUE, prob=(c(0.05, 0.95))) 
+sum(profit_house)
+})
+
+mean(profit)
+
+cat("The probability that profit is less than 0 is",as.numeric(prop.table(table(profit<0))[2]),".")
 ```
 
 ## Problem 3C 
 
 Note that the probability is much higher now. This is because the standard deviation grew. The companies giving out the loans did not want to raise interest rates much more since it would drive away clients. Instead they used a statistical approach. They increased $N$. How large does $N$ need to be for this probability to be 0.001? Use the central limit approximation and then confirm with a Monte Carlo simulation.
 
-Your answer here.
+
+mu_1 = 0.95*180000*0.041-120000*0.05
+SE = |180000*0.041+120000|*sqrt(0.05*0.95)/sqrt(N)
+z=(0-mu_1)/SE
+-3.090232=1011/(27761.83)/sqrt(N)
+sqrt(N)*1011=-3.090232*27761.83
+sqrt(N)*1011=-85790.5
+sqrt(N)=84.85707
+N=7200
 ```{r}
-###your code here
+N <- 7200
+profit <- replicate (B,{
+profit_house <- sample( c(-120000,0.041*180000), N, replace=TRUE, prob=(c(0.05, 0.95))) 
+sum(profit_house)
+})
+
+mean(profit)
+
+cat("The probability that profit is less than 0 is",as.numeric(prop.table(table(profit<0))[2]),".")
+
 ```
 
 So by doubling the number of loans we were able to reduce our risk! Now, for this to work, all the assumptions in our model need to be approximately correct, including the assumption that the probability of default was **independent**. This turned out to be false and the main reason for the under estimation of risk.
@@ -212,3 +401,12 @@ Generate a simulation with correlated outcomes such as those above. This time us
 ## Problem 4
 
 Read [this wikipedia page](https://en.wikipedia.org/wiki/Financial_crisis_of_2007%E2%80%9308) about the financial crisis. Write a paragraph describing how what you learned in this homework can help explain the conditions that led to the crisis.
+
+## My answer:
+Overvaluation of bundled subprime mortgages and questionable trading practices by both buyers and sellers led to failure of key businesses and declines in consumer wealth. 
+
+Analysts attribute the source of the issue, in large part, but not exclusively to the 1999 repeal of the Glass-Steagall act which alleviated key regulatory restrictions between investment banks and depository banks leading to unsafe lending practices and credit risks.
+
+In our simulation, we saw that increasing the interest rate would result in a higher default rate, thus increasing the number of loans offered the bank to maintain the same profit and risk rates. However, in order to increase the number of loans to desired levels, banks start givin loans to people and businesses that could not afford to do so.  
+
+The result was a global economic slow down, declines in credit availability, damage to investor confidence and declines in international trade. 
